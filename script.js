@@ -790,3 +790,7 @@ function resetBtn() {
     document.getElementById('existingFileName').textContent = '';
     // We don't clear dropzones to allow reuse if user just wanted to restart
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { stripSeason };
+}
