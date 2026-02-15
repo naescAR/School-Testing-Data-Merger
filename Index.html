@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Testing Data Merger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <style>
+        /* ── Reset & Base ─────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
+            color: #e2e8f0;
+            overflow: auto;
+        }
+
+        /* animated gradient orbs */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.25;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #3b82f6, transparent 70%);
+            top: -120px;
+            left: -80px;
+            animation: floatOrb 18s ease-in-out infinite alternate;
+        }
+
+        body::after {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #0ea5e9, transparent 70%);
+            bottom: -100px;
+            right: -60px;
+            animation: floatOrb 14s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes floatOrb {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(40px, -30px) scale(1.15);
+            }
+        }
+
+        /* ── Card Container ───────────────────────────────────── */
+        .card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 580px;
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 20px;
+            padding: 44px 36px 36px;
+            box-shadow:
+                0 25px 50px -12px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            animation: cardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes cardEnter {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ── Header ───────────────────────────────────────────── */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            border-radius: 16px;
+            font-size: 26px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px -4px rgba(59, 130, 246, 0.4);
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        /* ── Screens (show/hide) ───────────────────────────────── */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes fadeSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Mode Selection Cards ──────────────────────────────── */
+        .mode-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mode-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 20px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: border-color 0.25s, background 0.25s, transform 0.2s, box-shadow 0.25s;
+        }
+
+        .mode-card:hover {
+            background: rgba(15, 23, 42, 0.7);
+            border-color: rgba(59, 130, 246, 0.35);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px -4px rgba(59, 130, 246, 0.15);
+        }
+
+        .mode-card .mode-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .mode-icon-new {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+
+        .mode-icon-add {
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+        }
+
+        .mode-card .mode-text h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 2px;
+        }
+
+        .mode-card .mode-text p {
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+
+        /* ── Form ──────────────────────────────────────────────── */
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            margin-bottom: 6px;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            font-family: inherit;
+            padding: 0;
+        }
+
+        .back-link:hover {
+            color: #94a3b8;
+        }
+
+        .back-link svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Section divider label */
+        .section-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(100, 116, 139, 0.3), transparent);
+        }
+
+        .section-label .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .dot-ela {
+            background: #60a5fa;
+            box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
+        }
+
+        .dot-sci {
+            background: #34d399;
+            box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+        }
+
+        .dot-math {
+            background: #a78bfa;
+            box-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+        }
+
+        .dot-existing {
+            background: #38bdf8;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        }
+
+        /* Drop zone — single area per subject */
+        .drop-zone {
+            border: 2px dashed rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.25s, background 0.25s;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(59, 130, 246, 0.04);
+        }
+
+        .drop-zone-prompt {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: #94a3b8;
+            font-size: 13.5px;
+        }
+
+        .drop-zone-prompt .upload-icon {
+            font-size: 22px;
+            margin-bottom: 2px;
+        }
+
+        .drop-zone.has-files .drop-zone-prompt {
+            display: none;
+        }
+
+        /* File list inside drop zone */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 8px;
+            padding: 10px 12px;
+            animation: statusIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .file-item-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .file-item-name::before {
+            content: '📄 ';
+        }
+
+        .file-item-remove {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 0 0 10px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .file-item-remove:hover {
+            color: #f87171;
+        }
+
+        /* Add another link */
+        .add-another {
+            margin-top: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #60a5fa;
+            cursor: pointer;
+            transition: color 0.2s;
+            text-align: center;
+        }
+
+        .add-another:hover {
+            color: #93c5fd;
+        }
+
+        /* Input group */
+        .input-group {
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+            transition: color 0.2s;
+        }
+
+        /* ── Existing Report Card ──────────────────────────────── */
+        .existing-report-card {
+            background: rgba(14, 165, 233, 0.06);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-left: 3px solid #38bdf8;
+            border-radius: 12px;
+            padding: 18px 16px 16px;
+            margin-bottom: 4px;
+        }
+
+        .existing-report-card .section-label {
+            margin-top: 0;
+            color: #7dd3fc;
+            font-size: 12px;
+        }
+
+        .existing-report-card .input-group {
+            margin-top: 12px;
+        }
+
+        .existing-report-card .input-group label {
+            color: #bae6fd;
+        }
+
+        /* ── File Upload Drop Zone ─────────────────────────────── */
+        .upload-area {
+            position: relative;
+            border: 2px dashed rgba(148, 163, 184, 0.15);
+            border-radius: 12px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.25s, background 0.25s, transform 0.15s;
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        .upload-area:hover {
+            border-color: rgba(59, 130, 246, 0.35);
+            background: rgba(15, 23, 42, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-area .upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+        }
+
+        .upload-area .upload-label .upload-icon {
+            font-size: 24px;
+            opacity: 0.7;
+        }
+
+        .upload-area .upload-label .upload-text {
+            font-size: 12.5px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .upload-area .file-name {
+            font-size: 12px;
+            color: #34d399;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        /* ── Submit Button ─────────────────────────────────────── */
+        .submit-btn {
+            position: relative;
+            width: 100%;
+            padding: 13px 20px;
+            margin-top: 8px;
+            font-family: inherit;
+            font-size: 14.5px;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
+            box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.35);
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.45);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
+        .submit-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+            transition: none;
+        }
+
+        .submit-btn:hover:not(:disabled)::after {
+            animation: shimmer 0.8s ease forwards;
+        }
+
+        @keyframes shimmer {
+            to {
+                left: 100%;
+            }
+        }
+
+        /* ── Progress Bar ──────────────────────────────────────── */
+        .progress-container {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            padding: 18px 16px;
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            animation: fadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .progress-container.active {
+            display: flex;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 10px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa, #38bdf8);
+            background-size: 200% 100%;
+            animation: progressShimmer 1.8s ease-in-out infinite;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 24px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+            border-radius: 0 6px 6px 0;
+            opacity: 0.8;
+        }
+
+        @keyframes progressShimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12.5px;
+            color: #94a3b8;
+        }
+
+        .progress-step .step-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(96, 165, 250, 0.25);
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .progress-eta {
+            font-size: 11.5px;
+            color: #64748b;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-percent {
+            font-size: 12px;
+            font-weight: 700;
+            color: #60a5fa;
+            text-align: right;
+            min-width: 36px;
+        }
+
+        /* ── Status Messages ───────────────────────────────────── */
+        #status {
+            margin-top: 20px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .status-msg {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 600;
+            animation: statusIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes statusIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-success {
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.25);
+            color: #34d399;
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #f87171;
+        }
+
+        /* ── Result Actions ────────────────────────────────────── */
+        .result-panel {
+            animation: fadeSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .result-check {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(16, 185, 129, 0.1));
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .result-header-text h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 1px;
+        }
+
+        .result-header-text p {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .result-action-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 16px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            background: rgba(15, 23, 42, 0.5);
+            cursor: pointer;
+            transition: border-color 0.25s, background 0.25s, transform 0.2s, box-shadow 0.25s;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .result-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-action-btn .action-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            font-size: 18px;
+        }
+
+        .result-action-btn .action-label {
+            font-size: 12.5px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .action-format {
+            border-color: rgba(168, 85, 247, 0.2);
+        }
+
+        .action-format:hover {
+            border-color: rgba(168, 85, 247, 0.4);
+            background: rgba(168, 85, 247, 0.08);
+        }
+
+        .action-format .action-icon {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(139, 92, 246, 0.15));
+        }
+
+        .action-format .action-label {
+            color: #c4b5fd;
+        }
+
+        /* ── Footer ────────────────────────────────────────────── */
+        .footer {
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(148, 163, 184, 0.08);
+            text-align: center;
+            font-size: 11.5px;
+            color: #94a3b8;
+        }
+
+        /* ── Responsive ────────────────────────────────────────── */
+        @media (max-width: 560px) {
+            .card {
+                padding: 28px 20px 24px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-icon">🎓</div>
+            <h1>School Data Merger</h1>
+            <p id="headerSubtext">Upload RAW files to create a new merged report.</p>
+        </div>
+
+        <!-- ═══ SCREEN 1: Mode Selection ═══ -->
+        <div id="screenMode" class="screen active">
+            <div class="mode-cards">
+                <!-- Option 1: New Spreadsheet -->
+                <div class="mode-card" onclick="selectMode('new')">
+                    <div class="mode-icon mode-icon-new">📄</div>
+                    <div class="mode-text">
+                        <h3>Create New Report</h3>
+                        <p>Generate a new Excel file to download immediately.</p>
+                    </div>
+                </div>
+
+                <!-- Option 2: Add to Existing -->
+                <div class="mode-card" onclick="selectMode('existing')">
+                    <div class="mode-icon mode-icon-add">hny</div>
+                    <div class="mode-text">
+                        <h3>Add to Existing Spreadsheet</h3>
+                        <p>Append data to an existing Excel file.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ SCREEN 2: Upload Form ═══ -->
+        <div id="screenForm" class="screen">
+            <form id="mergeForm" onsubmit="handleForm(event)">
+                <div class="form-section">
+
+                    <!-- Back button -->
+                    <button type="button" class="back-link" onclick="showModeScreen()">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                        </svg>
+                        Back
+                    </button>
+
+                    <!-- Hidden mode field -->
+                    <input type="hidden" name="mode" id="modeField" value="new">
+
+                    <!-- Existing spreadsheet File -->
+                    <div id="existingUrlGroup" class="existing-report-card" style="display:none;">
+                        <div class="section-label"><span class="dot dot-existing"></span> Target Spreadsheet</div>
+                        <div class="input-group">
+                            <label>Select Existing Excel File</label>
+                            <div class="upload-area" id="existing-zone" onclick="triggerExistingBrowse()">
+                                <input type="file" id="existingFile" accept=".xlsx,.xls,.csv"
+                                    onchange="handleExistingPick(this)" style="display: none;">
+                                <div class="upload-label">
+                                    <span class="upload-icon">📂</span>
+                                    <span class="upload-text">Click to select file</span>
+                                </div>
+                                <div id="existingFileName" class="file-name" style="margin-top:8px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── ELA Section ── -->
+                    <div class="section-label"><span class="dot dot-ela"></span> ELA Data</div>
+                    <div class="drop-zone" id="ela-zone"
+                        ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event, 'ela')">
+                        <input type="file" name="elaFile1" id="elaFile1" accept=".xlsx,.xls,.csv" style="display:none"
+                            onchange="handlePick(this, 'ela', 0)">
+                        <input type="file" name="elaFile2" id="elaFile2" accept=".xlsx,.xls,.csv" style="display:none"
+                            onchange="handlePick(this, 'ela', 1)">
+                        <div class="drop-zone-prompt" id="ela-prompt" onclick="triggerBrowse('ela')">
+                            <span class="upload-icon">📤</span>
+                            <span>Drop ELA RAW files here or click to browse</span>
+                            <span class="upload-hint">.xlsx, .xls, or .csv · up to 2 files</span>
+                        </div>
+                        <div class="file-list" id="ela-files"></div>
+                        <div class="add-another" id="ela-add" style="display:none" onclick="triggerBrowse('ela')">
+                            ＋ Add another file
+                        </div>
+                    </div>
+
+                    <!-- ── Science Section ── -->
+                    <div class="section-label"><span class="dot dot-sci"></span> Science Data</div>
+                    <div class="drop-zone" id="sci-zone"
+                        ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event, 'sci')">
+                        <input type="file" name="sciFile1" id="sciFile1" accept=".xlsx,.xls,.csv" style="display:none"
+                            onchange="handlePick(this, 'sci', 0)">
+                        <input type="file" name="sciFile2" id="sciFile2" accept=".xlsx,.xls,.csv" style="display:none"
+                            onchange="handlePick(this, 'sci', 1)">
+                        <div class="drop-zone-prompt" id="sci-prompt" onclick="triggerBrowse('sci')">
+                            <span class="upload-icon">📤</span>
+                            <span>Drop Science RAW files here or click to browse</span>
+                            <span class="upload-hint">.xlsx, .xls, or .csv · up to 2 files</span>
+                        </div>
+                        <div class="file-list" id="sci-files"></div>
+                        <div class="add-another" id="sci-add" style="display:none" onclick="triggerBrowse('sci')">
+                            ＋ Add another file
+                        </div>
+                    </div>
+
+                    <!-- ── Math Section ── -->
+                    <div class="section-label"><span class="dot dot-math"></span> Math Data</div>
+                    <div class="drop-zone" id="math-zone"
+                        ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event, 'math')">
+                        <input type="file" name="mathFile1" id="mathFile1" accept=".xlsx,.xls,.csv" style="display:none"
+                            onchange="handlePick(this, 'math', 0)">
+                        <input type="file" name="mathFile2" id="mathFile2" accept=".xlsx,.xls,.csv" style="display:none"
+                            onchange="handlePick(this, 'math', 1)">
+                        <div class="drop-zone-prompt" id="math-prompt" onclick="triggerBrowse('math')">
+                            <span class="upload-icon">📤</span>
+                            <span>Drop Math RAW files here or click to browse</span>
+                            <span class="upload-hint">.xlsx, .xls, or .csv · up to 2 files</span>
+                        </div>
+                        <div class="file-list" id="math-files"></div>
+                        <div class="add-another" id="math-add" style="display:none" onclick="triggerBrowse('math')">
+                            ＋ Add another file
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload counter -->
+                <div class="upload-counter" id="uploadCounter">
+                    Upload at least <strong>1 file</strong> to continue
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="submit-btn" id="btn" disabled>
+                    <span id="btnContent">Merge Data</span>
+                </button>
+
+                <!-- Progress Bar (hidden by default) -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-info">
+                        <div class="progress-step">
+                            <div class="step-spinner"></div>
+                            <span id="progressText">Preparing…</span>
+                        </div>
+                        <span class="progress-percent" id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-eta" id="progressEta">Estimated time: ~30s</div>
+                </div> <!-- end progress-container -->
+            </form>
+            <div id="status"></div>
+        </div> <!-- end screenForm -->
+
+        <!-- Footer -->
+        <div class="footer">
+            Processes data locally in your browser
+        </div>
+    </div> <!-- end card -->
+
+    <script src="script.js"></script>
+</body>
+
+</html>
