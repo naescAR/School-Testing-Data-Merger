@@ -474,8 +474,10 @@ function normalizeHeader(h) {
     return (h || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+const SEASON_REGEX = /[\s\-]*(FALL|Fall|fall|WINTER|Winter|winter)$/i;
+
 function stripSeason(header) {
-    return header.replace(/[\s\-]*(FALL|Fall|fall|WINTER|Winter|winter)$/i, '').trim();
+    return header.replace(SEASON_REGEX, '').trim();
 }
 
 function buildOutputMap() {
