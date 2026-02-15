@@ -474,8 +474,10 @@ function normalizeHeader(h) {
     return (h || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+const SEASON_REGEX = /[\s\-]*(FALL|Fall|fall|WINTER|Winter|winter)$/i;
+
 function stripSeason(header) {
-    return header.replace(/[\s\-]*(FALL|Fall|fall|WINTER|Winter|winter)$/i, '').trim();
+    return header.replace(SEASON_REGEX, '').trim();
 }
 
 function buildOutputMap() {
@@ -675,29 +677,29 @@ function mergeData(sources, mode, existingData) {
 function applyStyles(ws, data) {
     if (!data || data.length === 0) return;
 
-    var range = XLSX.utils.decode_range(ws['!ref']);
-    var numCols = range.e.c + 1;
-    var numRows = range.e.r + 1;
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const numCols = range.e.c + 1;
+    const numRows = range.e.r + 1;
 
-    var fallHeaderBg = { rgb: "FDE8D0" };
-    var fallDataBg = { rgb: "FFF5EB" };
-    var winterHeaderBg = { rgb: "D0E4FD" };
-    var winterDataBg = { rgb: "EBF3FF" };
-    var sharedHeaderBg = { rgb: "E2E8F0" };
+    const fallHeaderBg = { rgb: "FDE8D0" };
+    const fallDataBg = { rgb: "FFF5EB" };
+    const winterHeaderBg = { rgb: "D0E4FD" };
+    const winterDataBg = { rgb: "EBF3FF" };
+    const sharedHeaderBg = { rgb: "E2E8F0" };
 
-    var colWidths = [];
+    const colWidths = [];
 
-    for (var C = 0; C < numCols; ++C) {
-        var headerVal = (data[0][C] || '').toString();
-        var isFall = /[-\s]FALL$/i.test(headerVal);
-        var isWinter = /[-\s]WINTER$/i.test(headerVal);
-        var maxLen = headerVal.length;
+    for (let C = 0; C < numCols; ++C) {
+        const headerVal = (data[0][C] || '').toString();
+        const isFall = /[-\s]FALL$/i.test(headerVal);
+        const isWinter = /[-\s]WINTER$/i.test(headerVal);
+        let maxLen = headerVal.length;
 
-        for (var R = 0; R < numRows; ++R) {
-            var cellAddr = XLSX.utils.encode_cell({ c: C, r: R });
+        for (let R = 0; R < numRows; ++R) {
+            const cellAddr = XLSX.utils.encode_cell({ c: C, r: R });
             if (!ws[cellAddr]) continue;
 
-            var style = {
+            const style = {
                 font: { name: "Calibri", sz: 11 },
                 border: {
                     top: { style: "thin", color: { auto: 1 } },
@@ -720,16 +722,16 @@ function applyStyles(ws, data) {
             }
             ws[cellAddr].s = style;
 
-            var val = ws[cellAddr].v;
-            var valLen = (val ? val.toString().length : 0);
+            const val = ws[cellAddr].v;
+            const valLen = (val ? val.toString().length : 0);
             if (valLen > maxLen) maxLen = valLen;
         }
         colWidths.push({ wch: Math.min(maxLen + 2, 40) }); // slightly wider cap
     }
 
     ws['!cols'] = colWidths;
-    var rowHeights = [{ hpt: 30 }];
-    for (var r = 1; r < numRows; r++) rowHeights.push({ hpt: 15 });
+    const rowHeights = [{ hpt: 30 }];
+    for (let r = 1; r < numRows; r++) rowHeights.push({ hpt: 15 });
     ws['!rows'] = rowHeights;
     ws['!freeze'] = { xSplit: "0", ySplit: "1" };
     ws['!autofilter'] = { ref: ws['!ref'] };
@@ -789,4 +791,8 @@ function resetBtn() {
     document.getElementById('existingFile').value = '';
     document.getElementById('existingFileName').textContent = '';
     // We don't clear dropzones to allow reuse if user just wanted to restart
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { stripSeason };
 }
