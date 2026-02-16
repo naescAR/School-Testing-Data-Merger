@@ -475,6 +475,13 @@ function generateAndDownload(data) {
    ══════════════════════════════════════════════════════════════ */
 // ... (Logic functions normalizeHeader, stripSeason, buildOutputMap, detectFileType, mergeData, applyStyles)
 
+function sanitizeVal(val) {
+    if (typeof val === 'string' && (val.startsWith('=') || val.startsWith('+') || val.startsWith('-') || val.startsWith('@'))) {
+        return "'" + val;
+    }
+    return val;
+}
+
 function normalizeHeader(h) {
     return (h || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -592,7 +599,7 @@ function mergeData(sources, mode, existingData) {
                     const val = row[c];
 
                     if (val !== undefined && val !== null && val !== '') {
-                        students[sid][hName] = val;
+                        students[sid][hName] = sanitizeVal(val);
                     }
                 }
             }
@@ -651,7 +658,7 @@ function mergeData(sources, mode, existingData) {
                 if (!targetHeader) continue;
                 const val = row[c];
                 if (val !== '' && val !== null && val !== undefined) {
-                    students[sid][targetHeader] = val;
+                    students[sid][targetHeader] = sanitizeVal(val);
                 }
             }
         }
