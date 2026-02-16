@@ -290,13 +290,21 @@ function updateSubmitButton() {
         totalFiles += zoneFiles[zones[i]];
     }
 
+    counter.innerHTML = '';
+
     if (totalFiles === 0) {
         btn.disabled = true;
-        counter.innerHTML = 'Upload at least <strong>1 file</strong> to continue';
+        counter.appendChild(document.createTextNode('Upload at least '));
+        const strong = document.createElement('strong');
+        strong.textContent = '1 file';
+        counter.appendChild(strong);
+        counter.appendChild(document.createTextNode(' to continue'));
     } else {
         btn.disabled = false;
-        counter.innerHTML = '<strong>' + totalFiles + '</strong> file' +
-            (totalFiles > 1 ? 's' : '') + ' ready to merge';
+        const strong = document.createElement('strong');
+        strong.textContent = totalFiles;
+        counter.appendChild(strong);
+        counter.appendChild(document.createTextNode(' file' + (totalFiles > 1 ? 's' : '') + ' ready to merge'));
     }
 }
 
@@ -822,8 +830,13 @@ function showError(msg) {
     const btn = document.getElementById('btn');
     btn.style.display = '';
     btn.disabled = false;
-    document.getElementById('status').innerHTML =
-        '<span class="status-msg status-error">⚠️&nbsp;' + msg + '</span>';
+    const statusDiv = document.getElementById('status');
+    statusDiv.innerHTML = '';
+
+    const span = document.createElement('span');
+    span.className = 'status-msg status-error';
+    span.textContent = '⚠️ ' + msg;
+    statusDiv.appendChild(span);
 }
 
 function resetBtn() {
