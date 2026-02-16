@@ -564,6 +564,12 @@ function mergeData(sources, mode, existingData) {
     const studentOrder = [];
     const extraHeaders = [];
 
+    // Pre-calculate normalized shared keys map for O(1) lookup
+    const sharedKeyMap = new Map();
+    for (const k of SHARED_KEYS) {
+        sharedKeyMap.set(normalizeHeader(k), k);
+    }
+
     // Load existing data if present
     if (mode === 'existing' && existingData && existingData.length >= 2) {
         const headers = existingData[0];
@@ -621,16 +627,13 @@ function mergeData(sources, mode, existingData) {
             if (!raw) { colMap.push(null); continue; }
 
             const normRaw = normalizeHeader(raw);
-            let isShared = false;
-            for (const k of SHARED_KEYS) {
-                if (normRaw === normalizeHeader(k)) {
-                    colMap.push(k);
-                    if (k === 'Student ID') idCol = c;
-                    isShared = true;
-                    break;
-                }
+
+            if (sharedKeyMap.has(normRaw)) {
+                const k = sharedKeyMap.get(normRaw);
+                colMap.push(k);
+                if (k === 'Student ID') idCol = c;
+                continue;
             }
-            if (isShared) continue;
 
             const base = stripSeason(raw).toLowerCase();
             if (outputMap[base] && outputMap[base][season]) {
