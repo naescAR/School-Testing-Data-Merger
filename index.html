@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
     <title>School Testing Data Merger</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -816,7 +817,7 @@
         <div id="screenMode" class="screen active">
             <div class="mode-cards">
                 <!-- Option 1: New Spreadsheet -->
-                <div class="mode-card" onclick="selectMode('new')">
+                <div class="mode-card" id="mode-card-new">
                     <div class="mode-icon mode-icon-new">📄</div>
                     <div class="mode-text">
                         <h3>Create New Report</h3>
@@ -825,7 +826,7 @@
                 </div>
 
                 <!-- Option 2: Add to Existing -->
-                <div class="mode-card" onclick="selectMode('existing')">
+                <div class="mode-card" id="mode-card-existing">
                     <div class="mode-icon mode-icon-add">hny</div>
                     <div class="mode-text">
                         <h3>Add to Existing Spreadsheet</h3>
@@ -837,11 +838,11 @@
 
         <!-- ═══ SCREEN 2: Upload Form ═══ -->
         <div id="screenForm" class="screen">
-            <form id="mergeForm" onsubmit="handleForm(event)">
+            <form id="mergeForm">
                 <div class="form-section">
 
                     <!-- Back button -->
-                    <button type="button" class="back-link" onclick="showModeScreen()">
+                    <button type="button" class="back-link" id="btn-back">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -858,9 +859,9 @@
                         <div class="section-label"><span class="dot dot-existing"></span> Target Spreadsheet</div>
                         <div class="input-group">
                             <label>Select Existing Excel File</label>
-                            <div class="upload-area" id="existing-zone" onclick="triggerExistingBrowse()">
+                            <div class="upload-area" id="existing-zone">
                                 <input type="file" id="existingFile" accept=".xlsx,.xls,.csv"
-                                    onchange="handleExistingPick(this)" style="display: none;">
+                                    style="display: none;">
                                 <div class="upload-label">
                                     <span class="upload-icon">📂</span>
                                     <span class="upload-text">Click to select file</span>
@@ -872,60 +873,48 @@
 
                     <!-- ── ELA Section ── -->
                     <div class="section-label"><span class="dot dot-ela"></span> ELA Data</div>
-                    <div class="drop-zone" id="ela-zone"
-                        ondragover="event.preventDefault(); this.classList.add('drag-over')"
-                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event, 'ela')">
-                        <input type="file" name="elaFile1" id="elaFile1" accept=".xlsx,.xls,.csv" style="display:none"
-                            onchange="handlePick(this, 'ela', 0)">
-                        <input type="file" name="elaFile2" id="elaFile2" accept=".xlsx,.xls,.csv" style="display:none"
-                            onchange="handlePick(this, 'ela', 1)">
-                        <div class="drop-zone-prompt" id="ela-prompt" onclick="triggerBrowse('ela')">
+                    <div class="drop-zone" id="ela-zone">
+                        <input type="file" name="elaFile1" id="elaFile1" accept=".xlsx,.xls,.csv" style="display:none">
+                        <input type="file" name="elaFile2" id="elaFile2" accept=".xlsx,.xls,.csv" style="display:none">
+                        <div class="drop-zone-prompt" id="ela-prompt">
                             <span class="upload-icon">📤</span>
                             <span>Drop ELA RAW files here or click to browse</span>
                             <span class="upload-hint">.xlsx, .xls, or .csv · up to 2 files</span>
                         </div>
                         <div class="file-list" id="ela-files"></div>
-                        <div class="add-another" id="ela-add" style="display:none" onclick="triggerBrowse('ela')">
+                        <div class="add-another" id="ela-add" style="display:none">
                             ＋ Add another file
                         </div>
                     </div>
 
                     <!-- ── Science Section ── -->
                     <div class="section-label"><span class="dot dot-sci"></span> Science Data</div>
-                    <div class="drop-zone" id="sci-zone"
-                        ondragover="event.preventDefault(); this.classList.add('drag-over')"
-                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event, 'sci')">
-                        <input type="file" name="sciFile1" id="sciFile1" accept=".xlsx,.xls,.csv" style="display:none"
-                            onchange="handlePick(this, 'sci', 0)">
-                        <input type="file" name="sciFile2" id="sciFile2" accept=".xlsx,.xls,.csv" style="display:none"
-                            onchange="handlePick(this, 'sci', 1)">
-                        <div class="drop-zone-prompt" id="sci-prompt" onclick="triggerBrowse('sci')">
+                    <div class="drop-zone" id="sci-zone">
+                        <input type="file" name="sciFile1" id="sciFile1" accept=".xlsx,.xls,.csv" style="display:none">
+                        <input type="file" name="sciFile2" id="sciFile2" accept=".xlsx,.xls,.csv" style="display:none">
+                        <div class="drop-zone-prompt" id="sci-prompt">
                             <span class="upload-icon">📤</span>
                             <span>Drop Science RAW files here or click to browse</span>
                             <span class="upload-hint">.xlsx, .xls, or .csv · up to 2 files</span>
                         </div>
                         <div class="file-list" id="sci-files"></div>
-                        <div class="add-another" id="sci-add" style="display:none" onclick="triggerBrowse('sci')">
+                        <div class="add-another" id="sci-add" style="display:none">
                             ＋ Add another file
                         </div>
                     </div>
 
                     <!-- ── Math Section ── -->
                     <div class="section-label"><span class="dot dot-math"></span> Math Data</div>
-                    <div class="drop-zone" id="math-zone"
-                        ondragover="event.preventDefault(); this.classList.add('drag-over')"
-                        ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event, 'math')">
-                        <input type="file" name="mathFile1" id="mathFile1" accept=".xlsx,.xls,.csv" style="display:none"
-                            onchange="handlePick(this, 'math', 0)">
-                        <input type="file" name="mathFile2" id="mathFile2" accept=".xlsx,.xls,.csv" style="display:none"
-                            onchange="handlePick(this, 'math', 1)">
-                        <div class="drop-zone-prompt" id="math-prompt" onclick="triggerBrowse('math')">
+                    <div class="drop-zone" id="math-zone">
+                        <input type="file" name="mathFile1" id="mathFile1" accept=".xlsx,.xls,.csv" style="display:none">
+                        <input type="file" name="mathFile2" id="mathFile2" accept=".xlsx,.xls,.csv" style="display:none">
+                        <div class="drop-zone-prompt" id="math-prompt">
                             <span class="upload-icon">📤</span>
                             <span>Drop Math RAW files here or click to browse</span>
                             <span class="upload-hint">.xlsx, .xls, or .csv · up to 2 files</span>
                         </div>
                         <div class="file-list" id="math-files"></div>
-                        <div class="add-another" id="math-add" style="display:none" onclick="triggerBrowse('math')">
+                        <div class="add-another" id="math-add" style="display:none">
                             ＋ Add another file
                         </div>
                     </div>

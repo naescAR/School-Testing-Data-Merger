@@ -230,9 +230,20 @@ function renderZone(zone) {
 
         const item = document.createElement('div');
         item.className = 'file-item';
-        item.innerHTML =
-            `<span class="file-item-name">${escapeHtml(name)}</span>` +
-            `<button type="button" class="file-item-remove" onclick="clearSlot('${zone}',${i})" title="Remove">×</button>`;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-item-name';
+        nameSpan.textContent = name;
+        item.appendChild(nameSpan);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'file-item-remove';
+        removeBtn.title = 'Remove';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => clearSlot(zone, i));
+        item.appendChild(removeBtn);
+
         fileList.appendChild(item);
     }
 
@@ -287,12 +298,6 @@ function updateSubmitButton() {
         counter.innerHTML = '<strong>' + totalFiles + '</strong> file' +
             (totalFiles > 1 ? 's' : '') + ' ready to merge';
     }
-}
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -740,25 +745,57 @@ function applyStyles(ws, data) {
 function showSuccess() {
     document.getElementById('progressContainer').classList.remove('active');
     const statusDiv = document.getElementById('status');
-    const actionHtml =
-        '<button onclick="resetBtn()" class="result-action-btn action-format" style="flex:0 0 auto; min-width:120px;">' +
-        '<div class="action-icon">🔄</div>' +
-        '<span class="action-label">Start Over</span>' +
-        '</button>';
+    statusDiv.innerHTML = '';
 
-    statusDiv.innerHTML =
-        '<div class="result-panel">' +
-        '<div class="result-header">' +
-        '<div class="result-check">✅</div>' +
-        '<div class="result-header-text">' +
-        '<h3>Success!</h3>' +
-        '<p>Your merged file should begin downloading shortly.</p>' +
-        '</div>' +
-        '</div>' +
-        '<div class="result-actions" style="justify-content:center;">' +
-        actionHtml +
-        '</div>' +
-        '</div>';
+    const resultPanel = document.createElement('div');
+    resultPanel.className = 'result-panel';
+
+    const resultHeader = document.createElement('div');
+    resultHeader.className = 'result-header';
+
+    const resultCheck = document.createElement('div');
+    resultCheck.className = 'result-check';
+    resultCheck.textContent = '✅';
+    resultHeader.appendChild(resultCheck);
+
+    const resultHeaderText = document.createElement('div');
+    resultHeaderText.className = 'result-header-text';
+
+    const h3 = document.createElement('h3');
+    h3.textContent = 'Success!';
+    resultHeaderText.appendChild(h3);
+
+    const p = document.createElement('p');
+    p.textContent = 'Your merged file should begin downloading shortly.';
+    resultHeaderText.appendChild(p);
+
+    resultHeader.appendChild(resultHeaderText);
+    resultPanel.appendChild(resultHeader);
+
+    const resultActions = document.createElement('div');
+    resultActions.className = 'result-actions';
+    resultActions.style.justifyContent = 'center';
+
+    const startOverBtn = document.createElement('button');
+    startOverBtn.className = 'result-action-btn action-format';
+    startOverBtn.style.flex = '0 0 auto';
+    startOverBtn.style.minWidth = '120px';
+    startOverBtn.addEventListener('click', resetBtn);
+
+    const actionIcon = document.createElement('div');
+    actionIcon.className = 'action-icon';
+    actionIcon.textContent = '🔄';
+    startOverBtn.appendChild(actionIcon);
+
+    const actionLabel = document.createElement('span');
+    actionLabel.className = 'action-label';
+    actionLabel.textContent = 'Start Over';
+    startOverBtn.appendChild(actionLabel);
+
+    resultActions.appendChild(startOverBtn);
+    resultPanel.appendChild(resultActions);
+
+    statusDiv.appendChild(resultPanel);
 }
 
 function updateProgressUI(pct, text) {
@@ -791,6 +828,64 @@ function resetBtn() {
     document.getElementById('existingFile').value = '';
     document.getElementById('existingFileName').textContent = '';
     // We don't clear dropzones to allow reuse if user just wanted to restart
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Initialization & Event Listeners
+   ══════════════════════════════════════════════════════════════ */
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setupEventListeners();
+    });
+}
+
+function setupEventListeners() {
+    // Mode Selection
+    const newModeBtn = document.getElementById('mode-card-new');
+    if (newModeBtn) newModeBtn.addEventListener('click', () => selectMode('new'));
+
+    const existingModeBtn = document.getElementById('mode-card-existing');
+    if (existingModeBtn) existingModeBtn.addEventListener('click', () => selectMode('existing'));
+
+    // Form
+    const form = document.getElementById('mergeForm');
+    if (form) form.addEventListener('submit', handleForm);
+
+    const backBtn = document.getElementById('btn-back');
+    if (backBtn) backBtn.addEventListener('click', showModeScreen);
+
+    // Existing File
+    const existingZone = document.getElementById('existing-zone');
+    if (existingZone) existingZone.addEventListener('click', triggerExistingBrowse);
+
+    const existingFile = document.getElementById('existingFile');
+    if (existingFile) existingFile.addEventListener('change', function () { handleExistingPick(this); });
+
+    // Zones
+    ['ela', 'sci', 'math'].forEach(zone => {
+        const zoneEl = document.getElementById(zone + '-zone');
+        if (zoneEl) {
+            zoneEl.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zoneEl.classList.add('drag-over');
+            });
+            zoneEl.addEventListener('dragleave', () => zoneEl.classList.remove('drag-over'));
+            zoneEl.addEventListener('drop', (e) => handleDrop(e, zone));
+        }
+
+        const file1 = document.getElementById(zone + 'File1');
+        if (file1) file1.addEventListener('change', function () { handlePick(this, zone, 0); });
+
+        const file2 = document.getElementById(zone + 'File2');
+        if (file2) file2.addEventListener('change', function () { handlePick(this, zone, 1); });
+
+        const prompt = document.getElementById(zone + '-prompt');
+        if (prompt) prompt.addEventListener('click', () => triggerBrowse(zone));
+
+        const addBtn = document.getElementById(zone + '-add');
+        if (addBtn) addBtn.addEventListener('click', () => triggerBrowse(zone));
+    });
 }
 
 if (typeof module !== 'undefined' && module.exports) {
