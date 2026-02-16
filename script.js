@@ -555,6 +555,7 @@ function mergeData(sources, mode, existingData) {
     const outputMap = buildOutputMap();
     const students = {};
     const studentOrder = [];
+    const extraHeaders = [];
 
     // Load existing data if present
     if (mode === 'existing' && existingData && existingData.length >= 2) {
@@ -568,6 +569,14 @@ function mergeData(sources, mode, existingData) {
         }
 
         if (sidCol !== -1) {
+            // Identify extra headers first
+            for (let i = 0; i < headers.length; i++) {
+                const hName = headers[i].toString().trim();
+                if (hName && !OUTPUT_HEADERS.includes(hName) && !extraHeaders.includes(hName)) {
+                    extraHeaders.push(hName);
+                }
+            }
+
             for (let r = 1; r < existingData.length; r++) {
                 const row = existingData[r];
                 const sid = (row[sidCol] || '').toString().trim();
@@ -581,15 +590,6 @@ function mergeData(sources, mode, existingData) {
                 for (let c = 0; c < headers.length; c++) {
                     const hName = headers[c].toString().trim();
                     const val = row[c];
-                    // Keep existing functionality: if user has additional columns not in OUTPUT_HEADERS, they won't be in result unless we adjust.
-                    // For now, let's strictly stick to OUTPUT_HEADERS schema to keep it simple, 
-                    // or populating 'students' simply.
-                    // The logic in previous Code.gs was: 
-                    // 1. Read existing
-                    // 2. Read new
-                    // 3. Re-generate OUTPUT_HEADERS.
-                    // Beware: this effectively drops any "extra" columns the existing sheet might have.
-                    // Given the user instructions, this seems acceptable for "Migration".
 
                     if (val !== undefined && val !== null && val !== '') {
                         students[sid][hName] = val;
@@ -658,10 +658,12 @@ function mergeData(sources, mode, existingData) {
     }
 
     const dataRows = [];
+    const finalHeaders = [...OUTPUT_HEADERS, ...extraHeaders];
+
     for (const sid of studentOrder) {
         const student = students[sid];
         const row = [];
-        for (const h of OUTPUT_HEADERS) {
+        for (const h of finalHeaders) {
             row.push(student[h] || '');
         }
         dataRows.push(row);
@@ -676,7 +678,7 @@ function mergeData(sources, mode, existingData) {
         return 0;
     });
 
-    return [OUTPUT_HEADERS].concat(dataRows);
+    return [finalHeaders].concat(dataRows);
 }
 
 function applyStyles(ws, data) {
@@ -889,5 +891,5 @@ function setupEventListeners() {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { stripSeason };
+    module.exports = { stripSeason, mergeData, OUTPUT_HEADERS };
 }
